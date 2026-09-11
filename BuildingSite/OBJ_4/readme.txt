@@ -1,1 +1,0 @@
-2 workmen carrying a board
