@@ -1,0 +1,17 @@
+; ForkLift Lorry Load Test A - Load the pallet
+
+M106 S0 ; Detach Object
+G4 S2 ; Pause
+G1 X243.000 Y6.000 Z90.000
+M106 S255 ; Attach Object
+G4 S2 ; Pause
+G1 X243.000 Y6.000 Z180.000
+G1 X243.000 Y99.000 Z180.000
+G1 X243.000 Y99.000 Z90.000
+G1 X265.000 Y99.000 Z90.000
+G4 S2 ; Pause
+G1 X220.000 Y99.000 Z90.000
+
+
+
+

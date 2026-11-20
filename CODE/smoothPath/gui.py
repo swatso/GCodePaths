@@ -32,6 +32,7 @@ class GCodeSmootherGUI:
 
     def __init__(self, root):
         self.root = root
+        self.smoothed_result = None
         root.title("G-Code Smoother v2")
 
         # ------------------------------------------------------------
@@ -95,6 +96,8 @@ class GCodeSmootherGUI:
 
         tk.Button(root, text="Run Smoothing", command=self.run_smoothing, width=20).grid(row=7, column=0, pady=10)
         tk.Button(root, text="Export SVG", command=self.export_svg, width=20).grid(row=7, column=1, pady=10)
+        self.export_gcode_button = tk.Button(root, text="Export G-code", command=self.export_gcode, width=20, state="disabled")
+        self.export_gcode_button.grid(row=7, column=2, pady=10)
 
         # ------------------------------------------------------------
         # Status bar
@@ -102,6 +105,15 @@ class GCodeSmootherGUI:
 
         self.status_var = tk.StringVar(value="Ready")
         tk.Label(root, textvariable=self.status_var, anchor="w").grid(row=8, column=0, columnspan=3, sticky="we")
+
+        for variable in (self.input_path_var, self.direction_var, self.fmin_var, self.fmax_var, self.spacing_var):
+            variable.trace_add("write", self.invalidate_smoothed_result)
+
+    def invalidate_smoothed_result(self, *_):
+        if self.smoothed_result is not None:
+            self.smoothed_result = None
+            self.export_gcode_button.config(state="disabled")
+            self.status_var.set("Settings changed; run smoothing before exporting G-code.")
 
     # ------------------------------------------------------------
     # File browser handlers
@@ -144,12 +156,13 @@ class GCodeSmootherGUI:
     # ------------------------------------------------------------
 
     def run_smoothing(self):
+        self.invalidate_smoothed_result()
         try:
             input_path = self.input_path_var.get()
-            output_folder = self.output_folder_var.get()
 
             if not os.path.isfile(input_path):
                 messagebox.showerror("Error", "Input file does not exist.")
+                self.status_var.set("Error")
                 return
 
             # Read G-code blocks
@@ -164,15 +177,7 @@ class GCodeSmootherGUI:
                 direction=self.direction_var.get()
             )
 
-            # Write output
             input_filename = fileio.get_filename(input_path)
-            output_path = fileio.write_gcode_file(
-                output_folder,
-                input_filename,
-                header,
-                mid,
-                smoothed_lines
-            )
 
             # Prepare data for plotting
             raw_points = engine.parse_g1_lines(path_block)
@@ -185,7 +190,10 @@ class GCodeSmootherGUI:
             bearings = [engine.extract_value(line, "Z") for line in smoothed_lines]
             feedrates = [engine.extract_value(line, "F") for line in smoothed_lines]
 
-            # Plot
+            self.smoothed_result = (input_filename, header, mid, smoothed_lines)
+            self.export_gcode_button.config(state="normal")
+            self.status_var.set("Smoothing complete; export G-code to save the preview.")
+
             plotter.plot_paths(
                 original_xy,
                 smoothed_xy,
@@ -194,8 +202,30 @@ class GCodeSmootherGUI:
                 arrow_step=self.arrow_step_var.get()
             )
 
-            self.status_var.set(f"Smoothing complete: {output_path}")
+        except Exception as e:
+            self.invalidate_smoothed_result()
+            messagebox.showerror("Error", str(e))
+            self.status_var.set("Error")
 
+    # ------------------------------------------------------------
+    # Export G-code
+    # ------------------------------------------------------------
+
+    def export_gcode(self):
+        if self.smoothed_result is None:
+            messagebox.showerror("Error", "Run smoothing before exporting G-code.")
+            return
+
+        try:
+            input_filename, header, mid, smoothed_lines = self.smoothed_result
+            output_path = fileio.write_gcode_file(
+                self.output_folder_var.get(),
+                input_filename,
+                header,
+                mid,
+                smoothed_lines
+            )
+            self.status_var.set(f"G-code exported: {output_path}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
             self.status_var.set("Error")
