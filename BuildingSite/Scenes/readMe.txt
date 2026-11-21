@@ -9,6 +9,6 @@ Scenes Index
 5   ForkLift Lorry to Store
 6   ForkLift Lorry to Home
 7   ForkLift Store to Home
-8   Run the ForkLift Sequence Automatically
+8   Run the ForkLift Sequence Automatically (No scene file)
 9   Forklift Lorry Load TestA - place pallet, then run scene 10
 10   ForkLift Lorry Load TestB - remove pallet
